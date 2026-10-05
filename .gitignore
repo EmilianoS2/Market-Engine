@@ -1,0 +1,41 @@
+# Older practice draft; the project uses FINALorderbook.cpp.
+/orderbook.cpp
+
+# Compiled programs and C++ build output.
+/FINALorderbook
+/FINALorderbook.exe
+/orderbook
+/orderbook.exe
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.pdb
+*.ilk
+*.out
+*.dSYM/
+build/
+cmake-build-*/
+CMakeFiles/
+
+# Python caches and local environments.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local editor and operating-system files.
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# Local configuration that may contain secrets.
+.env
+.env.*
+!.env.example

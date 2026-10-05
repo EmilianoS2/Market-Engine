@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Order Book Lab</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="site-shell">
+    <header class="site-header">
+      <div class="brand"><span class="brand-mark">OB</span><span>Order Book Lab</span></div>
+      <div id="connection" class="connection">Connecting…</div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">LOCAL C++ MATCHING ENGINE</p>
+          <h1>Watch your orders meet the market.</h1>
+          <p class="hero-copy">Place limit orders, see trades as they happen, and inspect the resting bids and asks. Prices use whole numbers, such as cents.</p>
+        </div>
+        <div class="market-summary" aria-label="Market summary">
+          <div><span>Best bid</span><strong id="best-bid">—</strong></div>
+          <div><span>Best ask</span><strong id="best-ask">—</strong></div>
+          <div><span>Spread</span><strong id="spread">—</strong></div>
+        </div>
+      </section>
+
+      <div class="dashboard-grid">
+        <section class="panel action-panel" aria-labelledby="place-title">
+          <div class="panel-heading">
+            <div><p class="section-label">01 / ACTIONS</p><h2 id="place-title">Place an order</h2></div>
+          </div>
+          <form id="order-form">
+            <fieldset class="side-picker">
+              <legend>Side</legend>
+              <label class="side-option buy-option"><input type="radio" name="side" value="buy" checked><span>Buy</span></label>
+              <label class="side-option sell-option"><input type="radio" name="side" value="sell"><span>Sell</span></label>
+            </fieldset>
+            <div class="field-grid">
+              <label>Order ID<input id="order-id" type="text" inputmode="numeric" pattern="[0-9]+" value="1" required></label>
+              <label>Price<input id="order-price" type="text" inputmode="numeric" pattern="[0-9]+" placeholder="1000" required></label>
+              <label class="full-width">Quantity<input id="order-quantity" type="text" inputmode="numeric" pattern="[0-9]+" placeholder="5" required></label>
+            </div>
+            <button id="place-button" class="primary-button" type="submit">Place order <span aria-hidden="true">↗</span></button>
+          </form>
+
+          <div class="divider"></div>
+          <form id="cancel-form" class="cancel-form">
+            <div><h3>Cancel an order</h3><p>Use the ID of an order still resting in the book.</p></div>
+            <div class="cancel-controls">
+              <label class="sr-only" for="cancel-id">Order ID to cancel</label>
+              <input id="cancel-id" type="text" inputmode="numeric" pattern="[0-9]+" placeholder="Order ID" required>
+              <button type="submit" class="secondary-button">Cancel</button>
+            </div>
+          </form>
+          <p id="message" class="message" role="status" aria-live="polite">Your book starts empty. Place an order to begin.</p>
+        </section>
+
+        <section class="panel book-panel" aria-labelledby="book-title">
+          <div class="panel-heading">
+            <div><p class="section-label">02 / LIVE BOOK</p><h2 id="book-title">Resting orders</h2></div>
+            <button id="reset-button" type="button" class="text-button">Clear book</button>
+          </div>
+          <div class="books">
+            <div class="book-side">
+              <div class="book-side-heading"><span class="side-dot bid-dot"></span><h3>Bids</h3><small>Highest first</small></div>
+              <table><thead><tr><th>Price</th><th>Quantity</th><th>Orders</th></tr></thead><tbody id="bids-body"></tbody></table>
+            </div>
+            <div class="book-side">
+              <div class="book-side-heading"><span class="side-dot ask-dot"></span><h3>Asks</h3><small>Lowest first</small></div>
+              <table><thead><tr><th>Price</th><th>Quantity</th><th>Orders</th></tr></thead><tbody id="asks-body"></tbody></table>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel depth-panel" aria-labelledby="depth-heading">
+        <div class="panel-heading depth-heading">
+          <div><p class="section-label">03 / MARKET DEPTH</p><h2 id="depth-heading">Resting liquidity by price</h2></div>
+          <div class="depth-legend" aria-label="Chart legend"><span><i class="side-dot bid-dot"></i>Bids</span><span><i class="side-dot ask-dot"></i>Asks</span></div>
+        </div>
+        <div class="chart-frame">
+          <svg id="depth-chart" viewBox="0 0 960 330" role="img" aria-labelledby="depth-chart-title depth-chart-description" hidden>
+            <title id="depth-chart-title">Order book depth chart</title>
+            <desc id="depth-chart-description">Cumulative resting buy and sell quantities by price.</desc>
+            <g id="depth-plot"></g>
+          </svg>
+          <p id="depth-empty" class="depth-empty">Place an order to see the book's depth chart.</p>
+        </div>
+        <p class="chart-note">Cumulative quantity includes orders at that price and all better prices. Bids build toward lower prices; asks build toward higher prices.</p>
+      </section>
+
+      <section class="panel trades-panel" aria-labelledby="trades-title">
+        <div class="panel-heading"><div><p class="section-label">04 / EXECUTIONS</p><h2 id="trades-title">Recent trades</h2></div><span class="panel-note">Newest first</span></div>
+        <div class="table-scroll"><table><thead><tr><th>Maker ID</th><th>Taker ID</th><th>Price</th><th>Quantity</th></tr></thead><tbody id="trades-body"></tbody></table></div>
+      </section>
+      <p class="footer-note">This session runs on your computer and resets when the server stops.</p>
+    </main>
+  </div>
+</body>
+</html>
