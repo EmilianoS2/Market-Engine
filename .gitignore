@@ -39,3 +39,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Generated local trade history.
+trades.csv

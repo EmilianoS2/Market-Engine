@@ -28,6 +28,31 @@
         </div>
       </section>
 
+      <section class="panel traffic-panel" aria-labelledby="traffic-title">
+        <div class="traffic-description">
+          <h2 id="traffic-title">Simulated traffic</h2>
+          <p>Random buys, sells, and cancellations use the live book. Your orders can match too, and filled trades are saved to <code>trades.csv</code>.</p>
+        </div>
+        <div class="traffic-controls">
+          <label for="traffic-speed">Speed
+            <select id="traffic-speed">
+              <option value="2000">Slow · ~1 action / 2s</option>
+              <option value="900" selected>Normal · ~1 action / s</option>
+              <option value="300">Busy · ~3 actions / s</option>
+            </select>
+          </label>
+          <button id="traffic-toggle" class="traffic-toggle" type="button" role="switch" aria-checked="false" aria-label="Simulated traffic">
+            <span class="traffic-switch" aria-hidden="true"></span><span id="traffic-toggle-label">Traffic off</span>
+          </button>
+        </div>
+        <div class="traffic-progress">
+          <span id="traffic-status" class="traffic-status" role="status" aria-live="polite">Off</span>
+          <span id="traffic-counts">0 orders · 0 fills</span>
+          <span id="traffic-activity">Turn on traffic to see resting liquidity become trades.</span>
+        </div>
+        <p class="traffic-hint">Fills update the current one-minute candle. The first fill in the next minute starts a new candle. Traffic pauses when this tab is hidden.</p>
+      </section>
+
       <div class="dashboard-grid">
         <section class="panel action-panel" aria-labelledby="place-title">
           <div class="panel-heading">
@@ -93,9 +118,36 @@
         <p class="chart-note">Cumulative quantity includes orders at that price and all better prices. Bids build toward lower prices; asks build toward higher prices.</p>
       </section>
 
-      <section class="panel trades-panel" aria-labelledby="trades-title">
-        <div class="panel-heading"><div><p class="section-label">04 / EXECUTIONS</p><h2 id="trades-title">Recent trades</h2></div><span class="panel-note">Newest first</span></div>
-        <div class="table-scroll"><table><thead><tr><th>Maker ID</th><th>Taker ID</th><th>Price</th><th>Quantity</th></tr></thead><tbody id="trades-body"></tbody></table></div>
+      <details id="recent-trades" class="panel trades-panel recent-trades-panel" aria-labelledby="trades-title">
+        <summary class="trades-summary">
+          <div><p class="section-label">04 / EXECUTIONS</p><h2 id="trades-title">Recent trades</h2></div>
+          <div class="trades-summary-controls">
+            <span id="trades-count" class="panel-note">0 trades</span>
+            <span class="trades-expand">Expand <span aria-hidden="true">+</span></span>
+            <span class="trades-collapse">Collapse <span aria-hidden="true">−</span></span>
+          </div>
+        </summary>
+        <p class="panel-note trades-order-note">Newest first · latest 30 trades</p>
+        <div class="table-scroll recent-trades-scroll" tabindex="0" role="region" aria-label="Recent trades table"><table><thead><tr><th>Maker ID</th><th>Taker ID</th><th>Price</th><th>Quantity</th></tr></thead><tbody id="trades-body"></tbody></table></div>
+      </details>
+
+      <section class="panel trades-panel candles-panel" aria-labelledby="candles-title">
+        <div class="panel-heading"><div><p class="section-label">05 / OHLCV</p><h2 id="candles-title">One-minute candles</h2></div><span class="panel-note">Oldest first</span></div>
+        <div class="candle-chart-meta">
+          <span class="candle-timeframe">1m</span>
+          <span id="candle-readout" class="candle-readout">Waiting for the first trade</span>
+        </div>
+        <div class="candle-chart-frame">
+          <svg id="candle-chart" viewBox="0 0 960 460" role="img" aria-labelledby="candle-chart-title candle-chart-description" hidden>
+            <title id="candle-chart-title">One-minute candlestick chart</title>
+            <desc id="candle-chart-description">Trade prices shown as candlesticks, with filled quantity below each minute.</desc>
+            <g id="candle-plot"></g>
+            <g id="candle-hover"></g>
+          </svg>
+          <p id="candle-empty" class="candle-empty">Match buy and sell orders to see candlesticks.</p>
+        </div>
+        <p class="chart-note candle-chart-note">Green candles closed at or above their open; red candles closed below. Volume bars show filled quantity. The chart shows the latest 48 minutes with trades.</p>
+        <div class="table-scroll"><table><thead><tr><th>Time (local)</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Volume</th></tr></thead><tbody id="candles-body"></tbody></table></div>
       </section>
       <p class="footer-note">This session runs on your computer and resets when the server stops.</p>
     </main>
