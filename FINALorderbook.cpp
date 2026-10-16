@@ -1,70 +1,4 @@
-#include <cstdint>
-#include <vector>
-#include <deque>
-#include <functional>
-#include <map>
-#include <unordered_map>
-#include <cassert>
-#include <stdexcept>
-#include <algorithm>
-#include <chrono>
-#include <fstream>
-#include <string>
-#include <sstream>
-
-using OrderId = std::uint64_t;
-using Price = std::uint64_t;
-using Quantity = std::uint64_t;
-using Timestamp = std::chrono::system_clock::time_point;
-
-enum class Side
-{
-    Buy,
-    Sell
-};
-
-// Represents an order that may still be waiting.
-struct Order
-{
-    OrderId id;
-    Side side;
-    Price price;
-    Quantity remaining;
-};
-
-// Represents a comleted matched order.
-struct Trade
-{
-    OrderId makerId; // Resting Order
-    OrderId takerId; // Incoming Order
-    Price price;
-    Quantity quantity;
-    Timestamp ExecutedAt;
-};
-
-struct Candle
-{
-    Timestamp startTime; // Start of the minute
-    Price open;
-    Price high;
-    Price low;
-    Price close;
-    Quantity volume;
-};
-
-class CandleBuilder
-{
-public:
-    void addTrade(const Trade &trade);
-
-    const std::vector<Candle> &candles() const
-    {
-        return candles_;
-    }
-
-private:
-    std::vector<Candle> candles_;
-};
+#include "include/market_engine/order_book.hpp"
 
 void CandleBuilder::addTrade(const Trade &trade)
 {
@@ -85,72 +19,6 @@ void CandleBuilder::addTrade(const Trade &trade)
     current.close = trade.price;
     current.volume += trade.quantity;
 }
-
-class OrderBook
-{
-public:
-    std::vector<Trade> addOrder(Order order);
-    bool cancelOrder(OrderId id);
-
-    bool contains(OrderId id) const;
-    Quantity quantityAt(Side side, Price price) const;
-    std::size_t orderCountAt(Side side, Price price) const;
-
-private:
-    using OrderQueue = std::deque<OrderId>;
-    using BidBook = std::map<Price, OrderQueue, std::greater<Price>>;
-    using AskBook = std::map<Price, OrderQueue>;
-    std::unordered_map<OrderId, Order> activeOrders_;
-    BidBook bids_;
-    AskBook asks_;
-};
-
-class TradeCSVWriter
-{
-public:
-    void writeTrade(const Trade &trade)
-    {
-        file_ << trade.makerId << ","
-              << trade.takerId << ","
-              << trade.price << ","
-              << trade.quantity << ","
-              << std::chrono::duration_cast<std::chrono::milliseconds>(trade.ExecutedAt.time_since_epoch()).count()
-              << "\n";
-    }
-    explicit TradeCSVWriter(const std::string &filename) : file_(filename, std::ios::app)
-    {
-        if (!file_.is_open())
-        {
-            throw std::runtime_error("Failed to open file: " + filename);
-        }
-        file_.seekp(0, std::ios::end);
-        if (file_.tellp() == std::streampos(0))
-        {
-            file_ << "MakerId,TakerId,Price,Quantity,ExecutedAtMs\n";
-        }
-    }
-
-private:
-    std::ofstream file_;
-};
-
-class TradeCSVReader
-{
-public:
-    explicit TradeCSVReader(const std::string &filename)
-        : file_(filename)
-    {
-        if (!file_)
-        {
-            throw std::runtime_error("Failed to open file: " + filename);
-        }
-    }
-
-    std::vector<Trade> readTrades();
-
-private:
-    std::ifstream file_;
-};
 
 std::vector<Trade> TradeCSVReader::readTrades()
 {
@@ -191,11 +59,28 @@ bool OrderBook::contains(OrderId id) const
     return activeOrders_.find(id) != activeOrders_.end();
 }
 
-std::vector<Trade> OrderBook::addOrder(Order order)
+std::optional<Order> OrderBook::findOrder(OrderId id) const
 {
-    if (order.id == 0 || order.price == 0 || order.remaining == 0)
+    auto found = activeOrders_.find(id);
+    if (found == activeOrders_.end()) return std::nullopt;
+    return found->second;
+}
+
+std::vector<Trade> OrderBook::addOrder(Order order, Timestamp executedAt)
+{
+    if ((order.type != OrderType::Limit && order.type != OrderType::Market) ||
+        (order.side != Side::Buy && order.side != Side::Sell))
+    {
+        throw std::invalid_argument("Invalid order type or side.");
+    }
+    const bool market = order.type == OrderType::Market;
+    if (order.id == 0 || order.remaining == 0 || (!market && order.price == 0))
     {
         throw std::invalid_argument("Order values must be greater than zero.");
+    }
+    if (market && order.price != 0)
+    {
+        throw std::invalid_argument("Market orders do not take a limit price.");
     }
     if (contains(order.id))
     {
@@ -207,7 +92,7 @@ std::vector<Trade> OrderBook::addOrder(Order order)
     if (order.side == Side::Buy)
     {
         auto it = asks_.begin();
-        while (it != asks_.end() && order.remaining > 0 && it->first <= order.price)
+        while (it != asks_.end() && order.remaining > 0 && (market || it->first <= order.price))
         {
             auto &queue = it->second;
             while (!queue.empty() && order.remaining > 0)
@@ -223,7 +108,7 @@ std::vector<Trade> OrderBook::addOrder(Order order)
                     queue.pop_front();
                     activeOrders_.erase(makerId);
                 }
-                trades.push_back({makerId, order.id, it->first, tradeQuantity, std::chrono::system_clock::now()});
+                trades.push_back({makerId, order.id, it->first, tradeQuantity, executedAt});
             }
             if (queue.empty())
             {
@@ -238,7 +123,7 @@ std::vector<Trade> OrderBook::addOrder(Order order)
     else // Side::Sell
     {
         auto it = bids_.begin();
-        while (it != bids_.end() && order.remaining > 0 && it->first >= order.price)
+        while (it != bids_.end() && order.remaining > 0 && (market || it->first >= order.price))
         {
             auto &queue = it->second;
             while (!queue.empty() && order.remaining > 0)
@@ -255,7 +140,7 @@ std::vector<Trade> OrderBook::addOrder(Order order)
                     activeOrders_.erase(makerId);
                 }
 
-                trades.push_back({makerId, order.id, it->first, tradeQuantity, std::chrono::system_clock::now()});
+                trades.push_back({makerId, order.id, it->first, tradeQuantity, executedAt});
             }
             if (queue.empty())
             {
@@ -267,7 +152,8 @@ std::vector<Trade> OrderBook::addOrder(Order order)
             }
         }
     }
-    if (order.remaining > 0)
+    // Market orders consume available liquidity immediately; unfilled quantity expires.
+    if (order.remaining > 0 && !market)
     {
         activeOrders_.emplace(order.id, order);
         if (order.side == Side::Buy)

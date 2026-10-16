@@ -25,6 +25,7 @@
           <div><span>Best bid</span><strong id="best-bid">—</strong></div>
           <div><span>Best ask</span><strong id="best-ask">—</strong></div>
           <div><span>Spread</span><strong id="spread">—</strong></div>
+          <div><span>Last trade</span><strong id="last-price">—</strong></div>
         </div>
       </section>
 
@@ -53,6 +54,42 @@
         <p class="traffic-hint">Fills update the current one-minute candle. The first fill in the next minute starts a new candle. Traffic pauses when this tab is hidden.</p>
       </section>
 
+      <section class="panel maker-panel" aria-labelledby="maker-title">
+        <div class="panel-heading maker-heading">
+          <div><p class="section-label">VIRTUAL ACCOUNT</p><h2 id="maker-title">Market maker</h2></div>
+          <div class="maker-actions"><span id="maker-status" class="panel-note">Connecting…</span><button id="maker-toggle" type="button" class="secondary-button" aria-pressed="false" disabled>Start maker</button></div>
+        </div>
+        <p class="maker-help">Quotes supply liquidity; trades happen when another participant accepts a price. Prices are integer ticks: 10,000 ticks = 100.00 virtual currency.</p>
+        <div class="maker-stats">
+          <div><span>Inventory / target</span><strong id="maker-inventory">100 / 100</strong></div>
+          <div><span>Virtual cash</span><strong id="maker-cash">10,000.00</strong></div>
+          <div><span>Marked P&amp;L</span><strong id="maker-pnl">0.00</strong></div>
+          <div><span>Portfolio value</span><strong id="maker-value">20,000.00</strong></div>
+        </div>
+        <div class="maker-quotes"><span>Bot bid <strong id="maker-bid">—</strong></span><span>Bot ask <strong id="maker-ask">—</strong></span></div>
+        <form id="maker-form">
+          <div class="maker-field-grid field-grid">
+            <label>Reference price (ticks)<input id="maker-reference" type="text" inputmode="numeric" value="10000" required></label>
+            <label>Full spread (basis points)<input id="maker-spread" type="text" inputmode="numeric" value="500" required></label>
+            <label>Shares per quote<input id="maker-size" type="text" inputmode="numeric" value="5" required></label>
+            <label>Refresh interval (ms)<input id="maker-interval" type="text" inputmode="numeric" value="1000" required></label>
+          </div>
+          <details class="maker-settings"><summary>Inventory policy</summary>
+            <div class="maker-field-grid field-grid">
+              <label>Skew (bps / excess share)<input id="maker-skew" type="text" inputmode="numeric" value="2" required></label>
+              <label>Minimum shares<input id="maker-minimum" type="text" inputmode="numeric" value="0" required></label>
+              <label>Target shares<input id="maker-target" type="text" inputmode="numeric" value="100" required></label>
+              <label>Maximum shares<input id="maker-maximum" type="text" inputmode="numeric" value="150" required></label>
+            </div>
+          </details>
+          <button id="maker-apply" type="submit" class="secondary-button maker-apply">Apply settings</button>
+        </form>
+        <details class="maker-settings"><summary>Account and performance details</summary>
+          <p id="maker-account-details" class="maker-help"></p><p id="maker-performance" class="maker-help"></p>
+        </details>
+        <p id="maker-message" class="maker-help" role="status" aria-live="polite">Seeded with 10,000.00 virtual cash and 100 shares. Stopping cancels bot quotes and preserves balances; Clear book explicitly resets the account.</p>
+      </section>
+
       <div class="dashboard-grid">
         <section class="panel action-panel" aria-labelledby="place-title">
           <div class="panel-heading">
@@ -65,11 +102,13 @@
               <label class="side-option sell-option"><input type="radio" name="side" value="sell"><span>Sell</span></label>
             </fieldset>
             <div class="field-grid">
-              <label>Order ID<input id="order-id" type="text" inputmode="numeric" pattern="[0-9]+" value="1" required></label>
-              <label>Price<input id="order-price" type="text" inputmode="numeric" pattern="[0-9]+" placeholder="1000" required></label>
+              <label class="full-width">Order type<select id="order-type" class="order-type-select"><option value="limit">Limit</option><option id="order-market-option" value="market" disabled>Market</option></select></label>
+              <label id="order-id-field">Order ID<input id="order-id" type="text" inputmode="numeric" pattern="[0-9]+" value="1" required></label>
+              <label id="order-price-field">Price (ticks)<input id="order-price" type="text" inputmode="numeric" pattern="[0-9]+" placeholder="10000" required></label>
               <label class="full-width">Quantity<input id="order-quantity" type="text" inputmode="numeric" pattern="[0-9]+" placeholder="5" required></label>
             </div>
-            <button id="place-button" class="primary-button" type="submit">Place order <span aria-hidden="true">↗</span></button>
+            <p id="order-type-help" class="order-type-help" aria-live="polite">Limit orders fill at your price or better; any remainder rests in the book.</p>
+            <button id="place-button" class="primary-button" type="submit"><span id="place-button-label">Place limit order</span><span aria-hidden="true">↗</span></button>
           </form>
 
           <div class="divider"></div>
@@ -92,11 +131,11 @@
           <div class="books">
             <div class="book-side">
               <div class="book-side-heading"><span class="side-dot bid-dot"></span><h3>Bids</h3><small>Highest first</small></div>
-              <table><thead><tr><th>Price</th><th>Quantity</th><th>Orders</th></tr></thead><tbody id="bids-body"></tbody></table>
+              <table><thead><tr><th>Price</th><th>Quantity</th><th>Orders</th><th>MM qty</th></tr></thead><tbody id="bids-body"></tbody></table>
             </div>
             <div class="book-side">
               <div class="book-side-heading"><span class="side-dot ask-dot"></span><h3>Asks</h3><small>Lowest first</small></div>
-              <table><thead><tr><th>Price</th><th>Quantity</th><th>Orders</th></tr></thead><tbody id="asks-body"></tbody></table>
+              <table><thead><tr><th>Price</th><th>Quantity</th><th>Orders</th><th>MM qty</th></tr></thead><tbody id="asks-body"></tbody></table>
             </div>
           </div>
         </section>
@@ -128,7 +167,7 @@
           </div>
         </summary>
         <p class="panel-note trades-order-note">Newest first · latest 30 trades</p>
-        <div class="table-scroll recent-trades-scroll" tabindex="0" role="region" aria-label="Recent trades table"><table><thead><tr><th>Maker ID</th><th>Taker ID</th><th>Price</th><th>Quantity</th></tr></thead><tbody id="trades-body"></tbody></table></div>
+        <div class="table-scroll recent-trades-scroll" tabindex="0" role="region" aria-label="Recent trades table"><table><thead><tr><th>Maker ID</th><th>Taker ID</th><th>Price</th><th>Quantity</th><th>Buyer</th><th>Seller</th></tr></thead><tbody id="trades-body"></tbody></table></div>
       </details>
 
       <section class="panel trades-panel candles-panel" aria-labelledby="candles-title">
@@ -136,12 +175,15 @@
         <div class="candle-chart-meta">
           <span class="candle-timeframe">1m</span>
           <span id="candle-readout" class="candle-readout">Waiting for the first trade</span>
+          <label class="maker-lines-toggle"><input id="maker-lines-toggle" type="checkbox"><span>Live maker limits</span></label>
         </div>
+        <p id="maker-lines-status" class="maker-lines-status" hidden></p>
         <div class="candle-chart-frame">
           <svg id="candle-chart" viewBox="0 0 960 460" role="img" aria-labelledby="candle-chart-title candle-chart-description" hidden>
             <title id="candle-chart-title">One-minute candlestick chart</title>
-            <desc id="candle-chart-description">Trade prices shown as candlesticks, with filled quantity below each minute.</desc>
+            <desc id="candle-chart-description">Trade prices shown as candlesticks, with filled quantity below each minute. Optional green buy and red sell lines show the market maker's current resting orders.</desc>
             <g id="candle-plot"></g>
+            <g id="candle-maker-quotes"></g>
             <g id="candle-hover"></g>
           </svg>
           <p id="candle-empty" class="candle-empty">Match buy and sell orders to see candlesticks.</p>
